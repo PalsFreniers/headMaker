@@ -1,0 +1,14 @@
+name = "headmaker"
+description = "Shiny new project"
+version = "0.1.0-dev"
+
+authors = ["Tidian DELAGE"]
+maintainers = ["Tidian DELAGE <tidian.delage@protonmail.ch>"]
+maintainers-logins = ["PalsFreniers"]
+
+executables = ["headmaker"]
+
+[build-switches]
+"*".style_checks = "No"
+"*".Ada_Version = "GNAT_Extensions"
+
