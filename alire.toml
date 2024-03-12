@@ -10,5 +10,5 @@ executables = ["headmaker"]
 
 [build-switches]
 "*".style_checks = "No"
-"*".Ada_Version = "GNAT_Extensions"
+"*".debug_info = "Yes"
 
