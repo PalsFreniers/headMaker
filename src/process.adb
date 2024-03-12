@@ -150,7 +150,6 @@ package body Process is
                 f: IO.File_Type;
                 name: String := self.header.To_String;
         begin
-                IO.Put_Line("file => '" & name & "' => '" & self.header.To_String & "'");
                 f.Create(Name => name);
                 for i in name'First .. name'Last loop
                         if name(i) /= '.' then
