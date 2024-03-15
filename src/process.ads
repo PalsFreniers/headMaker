@@ -9,10 +9,11 @@ package Process is
                 has_header: Boolean := False;
         end record;
 
+        function is_signature(self: sourceFile; signature: String) return Boolean;
         function headName(self: in out sourceFile; line: String) return Boolean;
         function has_symbol(self: sourceFile; symbol: String) return Boolean;
-        procedure getPrototype(self: in out sourceFile; line: String);
         procedure processFile(self: in out sourceFile; path: String; info: Boolean);
+        procedure getPrototype(self: in out sourceFile; line: String);
         procedure append(self: sourceFile; warn: Boolean);
         procedure write(self: sourceFile);
         procedure printHelp(name: String);

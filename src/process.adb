@@ -94,12 +94,29 @@ package body Process is
                 return False;
         end has_symbol;
 
+        function is_signature(self: sourceFile; signature: String) return Boolean is
+                engine: constant Regpat.Pattern_Matcher := Regpat.Compile("^(((struct|enum|union|unsigned|signed)\s)?(long\s)?(long\s)?[a-zA-Z0-9_]+\s*(\s+|[*]*)\s*[a-zA-Z0-9_]+\s*[(]\s*(\s*(((struct|enum|union|unsigned|signed)\s)?(long\s)?(long\s)?\s*[a-zA-Z0-9_]+\s*(\s+|[*]*)\s*[a-zA-Z0-9_]+\s*([[]\s*[0-9]*\s*[]]\s*)?\s*[,]?\s*)*|(\s*void\s*)?)\s*[)])");
+                match: Regpat.Match_Array(0 .. 1);
+                line: constant String := self.prototypes.To_String;
+                start: Integer := line'First;
+        begin
+                loop
+                        Regpat.Match(engine, line(start .. line'Last), match);
+                        exit when match(0) = Regpat.No_Match;
+                        return True when line(match(1).First .. match(1).Last) = signature;
+                        start := match(1).Last + 3;
+                end loop;
+                return False;
+        end is_signature;
+
         procedure append(self: sourceFile; warn: Boolean) is
                 f: IO.File_Type;
                 name: String := self.header.To_String;
                 nameCpy: constant String := name;
                 engine: constant Regpat.Pattern_Matcher := Regpat.Compile("([a-zA-Z0-9_]+)\s*[(]");
+                sigEngine: constant Regpat.Pattern_Matcher := Regpat.Compile("^(((struct|enum|union|unsigned|signed)\s)?(long\s)?(long\s)?[a-zA-Z0-9_]+\s*(\s+|[*]*)\s*[a-zA-Z0-9_]+\s*[(]\s*(\s*(((struct|enum|union|unsigned|signed)\s)?(long\s)?(long\s)?\s*[a-zA-Z0-9_]+\s*(\s+|[*]*)\s*[a-zA-Z0-9_]+\s*([[]\s*[0-9]*\s*[]]\s*)?\s*[,]?\s*)*|(\s*void\s*)?)\s*[)])");
                 match: Regpat.Match_Array(0 .. 1);
+                sigMatch: Regpat.Match_Array(0 .. 1);
                 data: Unbounded_String;
                 newProto: Unbounded_String;
         begin
@@ -133,7 +150,12 @@ package body Process is
                                         newProto := newProto & line & ASCII.LF;
                                 else
                                         if warn then
-                                                IO.Put_Line ("warning: overriting signature of symbol '" & line(match(1).First .. match(1).Last) & "'");
+                                                Regpat.Match(sigEngine, line, sigMatch);
+                                                if sigMatch(0) = Regpat.No_Match then
+                                                        IO.Put_Line ("warning: unknown signature of symbol '" & line(match(1).First .. match(1).Last) & "'");
+                                                elsif not self.is_signature(line(sigMatch(1).First .. sigMatch(1).Last)) then
+                                                        IO.Put_Line ("warning: overriting signature of symbol '" & line(match(1).First .. match(1).Last) & "'");
+                                                end if;
                                         end if;
                                 end if;
                         end;
