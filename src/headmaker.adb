@@ -25,45 +25,88 @@ procedure Headmaker is
         computeProject: Boolean := False;
 begin
         for i in 1 .. CLI.Argument_Count loop
-                if CLI.Argument(i) = "--no-warn" then
-                        warn := False;
-                elsif CLI.Argument(i) = "--warn" then
-                        warn := True;
-                elsif CLI.Argument(i) = "-nw" then
-                        warn := False;
-                elsif CLI.Argument(i) = "-w" then
-                        warn := True;
-                elsif CLI.Argument(i) = "--no-info" then
-                        info := False;
-                elsif CLI.Argument(i) = "--info" then
-                        info := True;
-                elsif CLI.Argument(i) = "-ni" then
-                        info := False;
-                elsif CLI.Argument(i) = "-i" then
-                        info := True;
-                elsif CLI.Argument(i) = "-p" then
-                        if CLI.Argument_Count < i + 1 then
+                if (i = 1) then
+                        if CLI.Argument(i) = "--no-warn" then
+                                warn := False;
+                        elsif CLI.Argument(i) = "--warn" then
+                                warn := True;
+                        elsif CLI.Argument(i) = "-nw" then
+                                warn := False;
+                        elsif CLI.Argument(i) = "-w" then
+                                warn := True;
+                        elsif CLI.Argument(i) = "--no-info" then
+                                info := False;
+                        elsif CLI.Argument(i) = "--info" then
+                                info := True;
+                        elsif CLI.Argument(i) = "-ni" then
+                                info := False;
+                        elsif CLI.Argument(i) = "-i" then
+                                info := True;
+                        elsif CLI.Argument(i) = "-p" then
+                                if CLI.Argument_Count < i + 1 then
+                                        process.printHelp(CLI.Command_Name);
+                                        IO.Put_Line ("Unknown argument: '" & CLI.Argument(i) & "'");
+                                        return;
+                                end if;
+                                project.name := To_Unbounded_String(CLI.Argument(i + 1));
+                                computeProject := True;
+                        elsif CLI.Argument(i) = "--project" then
+                                if CLI.Argument_Count < i + 1 then
+                                        process.printHelp(CLI.Command_Name);
+                                        IO.Put_Line ("Unknown argument: '" & CLI.Argument(i) & "'");
+                                        return;
+                                end if;
+                                project.name := To_Unbounded_String(CLI.Argument(i + 1));
+                                computeProject := True;
+                        elsif (CLI.Argument(i) = "-h") or (CLI.Argument(i) = "--help") then
+                                process.printHelp(CLI.Command_Name);
+                                return;
+                        else
                                 process.printHelp(CLI.Command_Name);
                                 IO.Put_Line ("Unknown argument: '" & CLI.Argument(i) & "'");
                                 return;
                         end if;
-                        project.name := To_Unbounded_String(CLI.Argument(i + 1));
-                        computeProject := True;
-                elsif CLI.Argument(i) = "--project" then
-                        if CLI.Argument_Count < i + 1 then
+                elsif ((CLI.Argument(i - 1) /= "-p") and (CLI.Argument(i - 1) /= "--project")) then
+                        if CLI.Argument(i) = "--no-warn" then
+                                warn := False;
+                        elsif CLI.Argument(i) = "--warn" then
+                                warn := True;
+                        elsif CLI.Argument(i) = "-nw" then
+                                warn := False;
+                        elsif CLI.Argument(i) = "-w" then
+                                warn := True;
+                        elsif CLI.Argument(i) = "--no-info" then
+                                info := False;
+                        elsif CLI.Argument(i) = "--info" then
+                                info := True;
+                        elsif CLI.Argument(i) = "-ni" then
+                                info := False;
+                        elsif CLI.Argument(i) = "-i" then
+                                info := True;
+                        elsif CLI.Argument(i) = "-p" then
+                                if CLI.Argument_Count < i + 1 then
+                                        process.printHelp(CLI.Command_Name);
+                                        IO.Put_Line ("Unknown argument: '" & CLI.Argument(i) & "'");
+                                        return;
+                                end if;
+                                project.name := To_Unbounded_String(CLI.Argument(i + 1));
+                                computeProject := True;
+                        elsif CLI.Argument(i) = "--project" then
+                                if CLI.Argument_Count < i + 1 then
+                                        process.printHelp(CLI.Command_Name);
+                                        IO.Put_Line ("Unknown argument: '" & CLI.Argument(i) & "'");
+                                        return;
+                                end if;
+                                project.name := To_Unbounded_String(CLI.Argument(i + 1));
+                                computeProject := True;
+                        elsif (CLI.Argument(i) = "-h") or (CLI.Argument(i) = "--help") then
+                                process.printHelp(CLI.Command_Name);
+                                return;
+                        else
                                 process.printHelp(CLI.Command_Name);
                                 IO.Put_Line ("Unknown argument: '" & CLI.Argument(i) & "'");
                                 return;
                         end if;
-                        project.name := To_Unbounded_String(CLI.Argument(i + 1));
-                        computeProject := True;
-                elsif (CLI.Argument(i) = "-h") or (CLI.Argument(i) = "--help") then
-                        process.printHelp(CLI.Command_Name);
-                        return;
-                else
-                        process.printHelp(CLI.Command_Name);
-                        IO.Put_Line ("Unknown argument: '" & CLI.Argument(i) & "'");
-                        return;
                 end if;
         end loop;
         DIR.Start_Search(search, curDir, "*.c");
@@ -140,5 +183,5 @@ begin
         if info then
                 IO.Put_Line("Finished writing all headers");
         end if;
-        project.compile;
+        project.compile(info);
 end Headmaker;

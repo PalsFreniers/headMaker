@@ -11,4 +11,5 @@ executables = ["headmaker"]
 [build-switches]
 "*".style_checks = "No"
 "*".debug_info = "Yes"
-
+[[depends-on]]
+spawn = "^24.0.0"

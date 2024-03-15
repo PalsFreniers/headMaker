@@ -26,6 +26,7 @@ package Process is
                name: Unbounded_String;
         end record;
 
+        function projectName(self: in out Project; line: String) return Boolean;
         function addFile(self: in out Project; path: String) return Boolean;
-        procedure compile(self: Project);
+        procedure compile(self: Project; info: Boolean);
 end Process;
