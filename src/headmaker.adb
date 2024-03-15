@@ -19,8 +19,10 @@ procedure Headmaker is
         sourcesCursor: process.sourceList.Cursor;
         headers: process.sourceList.List;
         headersCursor: process.sourceList.Cursor;
+        project: process.Project;
         info: Boolean := False;
         warn: Boolean := True;
+        computeProject: Boolean := False;
 begin
         for i in 1 .. CLI.Argument_Count loop
                 if CLI.Argument(i) = "--no-warn" then
@@ -39,6 +41,22 @@ begin
                         info := False;
                 elsif CLI.Argument(i) = "-i" then
                         info := True;
+                elsif CLI.Argument(i) = "-p" then
+                        if CLI.Argument_Count < i + 1 then
+                                process.printHelp(CLI.Command_Name);
+                                IO.Put_Line ("Unknown argument: '" & CLI.Argument(i) & "'");
+                                return;
+                        end if;
+                        project.name := To_Unbounded_String(CLI.Argument(i + 1));
+                        computeProject := True;
+                elsif CLI.Argument(i) = "--project" then
+                        if CLI.Argument_Count < i + 1 then
+                                process.printHelp(CLI.Command_Name);
+                                IO.Put_Line ("Unknown argument: '" & CLI.Argument(i) & "'");
+                                return;
+                        end if;
+                        project.name := To_Unbounded_String(CLI.Argument(i + 1));
+                        computeProject := True;
                 elsif (CLI.Argument(i) = "-h") or (CLI.Argument(i) = "--help") then
                         process.printHelp(CLI.Command_Name);
                         return;
@@ -52,11 +70,19 @@ begin
         loop
                 exit when not DIR.More_Entries(search);
                 DIR.Get_Next_Entry(search, dirEntry);
-                file: process.sourceFile;
                 case dirEntry.Kind is
                         when DIR.Ordinary_File =>
-                                file.processFile(dirEntry.Full_Name, info);
-                                sources.Append(file);
+                                if not computeProject then
+                                        file: process.sourceFile;
+                                        file.processFile(dirEntry.Full_Name, info);
+                                        sources.Append(file);
+                                else
+                                        if project.addFile(dirEntry.Full_Name) then
+                                                file: process.sourceFile;
+                                                file.processFile(dirEntry.Full_Name, info);
+                                                sources.Append(file);
+                                        end if;
+                                end if;
                         when others => null;
                 end case;
         end loop;
@@ -114,4 +140,5 @@ begin
         if info then
                 IO.Put_Line("Finished writing all headers");
         end if;
+        project.compile;
 end Headmaker;

@@ -18,7 +18,8 @@ package body Process is
                 IO.Put_Line("    -w  | --warn            prints warning messages");
                 IO.Put_Line("    -ni | --no-info         remove info messages");
                 IO.Put_Line("    -i  | --info            prints info messages");
-                IO.Put_Line("    -h  | --no-warn         prints this help");
+                IO.Put_Line("    -p  | --project (NAME)  find and compiles project (NAME)");
+                IO.Put_Line("    -h  | --help            prints this help");
         end printHelp;
 
         procedure processFile(self: in out sourceFile; path: String; info: Boolean) is

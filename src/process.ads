@@ -3,7 +3,7 @@ with Ada.Strings.Unbounded;
 use Ada.Strings.Unbounded;
 
 package Process is
-        type sourceFile is tagged record
+        type sourceFile is record
                 prototypes: Unbounded_String;
                 header: Unbounded_String;
                 has_header: Boolean := False;
@@ -19,4 +19,13 @@ package Process is
         procedure printHelp(name: String);
 
         package sourceList is new Ada.Containers.Doubly_Linked_Lists(process.sourceFile);
+        package stringList is new Ada.Containers.Doubly_Linked_Lists(Unbounded_String);
+
+        type Project is record
+               files: stringList.List; 
+               name: Unbounded_String;
+        end record;
+
+        function addFile(self: in out Project; path: String) return Boolean;
+        procedure compile(self: Project);
 end Process;
