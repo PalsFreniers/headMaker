@@ -1,11 +1,13 @@
 with Ada.Characters.Handling;
 with Ada.Directories;
+with Ada.Streams;
 with Ada.Text_IO;
 with GNAT.RegPat;
 with Spawn;
 with Spawn.Processes;
 with Spawn.String_Vectors;
 with Spawn.Processes.Monitor_Loop;
+use Ada.Streams;
 use GNAT.Regpat;
 use Spawn;
 use GNAT;
@@ -16,19 +18,15 @@ package body Process is
         package IO renames Text_IO;
         package CH renames Characters.Handling;
         package DIR renames Directories;
+        package CLI renames Command_Line;
         package Listeners is
-                type Listener is new Spawn.Processes.Process_Listener with record
-                        Stdin   : Ada.Strings.Unbounded.Unbounded_String;
-                        Stdout  : Ada.Strings.Unbounded.Unbounded_String;
-                        Stderr  : Ada.Strings.Unbounded.Unbounded_String;
+                type Listener is limited new Spawn.Processes.Process_Listener with record
+                        proc: Spawn.Processes.Process;
                         Started : Boolean := False;
                         Stopped : Boolean := False;
                         Error   : Integer := 0;
                 end record;
 
-                overriding procedure Standard_Output_Available(Self: in out Listener);
-                overriding procedure Standard_Error_Available(Self: in out Listener);
-                overriding procedure Standard_Input_Available(Self: in out Listener);
                 overriding procedure Started (Self: in out Listener);
                 overriding procedure Finished(Self: in out Listener; Exit_Status: Spawn.Processes.Process_Exit_Status; Exit_Code: Spawn.Processes.Process_Exit_Code);
                 overriding procedure Error_Occurred(Self: in out Listener; Process_Error : Integer);
@@ -36,21 +34,6 @@ package body Process is
         end Listeners;
 
         package body Listeners is
-                overriding procedure Standard_Output_Available(Self : in out Listener) is
-                begin
-                        null;
-                end Standard_Output_Available;
-
-                overriding procedure Standard_Error_Available (Self : in out Listener) is
-                begin
-                        null;
-                end Standard_Error_Available;
-
-                overriding procedure Standard_Input_Available(Self : in out Listener) is
-                begin
-                        null;
-                end Standard_Input_Available;
-
                 overriding procedure Started (Self : in out Listener) is
                 begin
                         Self.Started := True;
@@ -67,8 +50,8 @@ package body Process is
                         Self.Error := Process_Error;
                         Self.Stopped := True;
                 end Error_Occurred;
-
         end Listeners;
+
         procedure printHelp(name: String) is
         begin
                 IO.Put_Line("USAGE: " & name & " [OPTIONS]");
@@ -77,10 +60,12 @@ package body Process is
                 IO.Put_Line("    -w  | --warn            prints warning messages");
                 IO.Put_Line("    -ni | --no-info         remove info messages");
                 IO.Put_Line("    -i  | --info            prints info messages");
+                IO.Put_Line("    -ne | --no-error        remove error messages");
+                IO.Put_Line("    -e  | --error           prints error messages");
                 IO.Put_Line("    -h  | --help            prints this help");
         end printHelp;
-
-        procedure processFile(self: in out sourceFile; path: String; info: Boolean) is
+        
+        procedure processFile(self: in out sourceFile; path: String; info: Boolean; error: Boolean) is
                 file: IO.File_Type;
         begin
                 file.Open(IO.In_File, path);
@@ -92,7 +77,9 @@ package body Process is
                 if self.has_header then
                         data: constant String := self.header.To_String;
                         if data(data'Last - 1 .. data'Last) /= ".h" then
-                                IO.Put_Line("Founded Error in auto header '" & data & "' : header extension is not .h");
+                                if error then
+                                        IO.Put_Line("Founded Error in auto header '" & data & "' : header extension is not .h");
+                                end if;
                                 self.has_header := False;
                                 return;
                         elsif info then
@@ -107,7 +94,7 @@ package body Process is
                 end loop;
                 file.Close;
         end processFile;
-
+        
         function headName(self: in out sourceFile; line: String) return Boolean is
                 i, k: Integer := 0;
         begin
@@ -128,7 +115,7 @@ package body Process is
                 self.header := To_Unbounded_String(line(k .. line'Last));
                 return True;
         end headName;
-
+        
         procedure getPrototype(self: in out sourceFile; line: String) is
                 engine: constant Regpat.Pattern_Matcher := Regpat.Compile("^(((struct|enum|union|unsigned|signed)\s)?(long\s)?(long\s)?[a-zA-Z0-9_]+\s*(\s+|[*]*)\s*[a-zA-Z0-9_]+\s*[(]\s*(\s*(((struct|enum|union|unsigned|signed)\s)?(long\s)?(long\s)?\s*[a-zA-Z0-9_]+\s*(\s+|[*]*)\s*[a-zA-Z0-9_]+\s*([[]\s*[0-9]*\s*[]]\s*)?\s*[,]?\s*)*|(\s*void\s*)?)\s*[)])");
                 match: Regpat.Match_Array(0 .. 1);
@@ -137,7 +124,7 @@ package body Process is
                 return when match(0) = Regpat.No_Match;
                 self.prototypes := self.prototypes & line(match(1).First .. match(1).Last) & ";" & ASCII.LF;
         end getPrototype;
-
+        
         function has_symbol(self: sourceFile; symbol: String) return Boolean is
                 engine: constant Regpat.Pattern_Matcher := Regpat.Compile("([a-zA-Z0-9_]+)\s*[(]");
                 match: Regpat.Match_Array(0 .. 1);
@@ -152,7 +139,7 @@ package body Process is
                 end loop;
                 return False;
         end has_symbol;
-
+        
         function is_signature(self: sourceFile; signature: String) return Boolean is
                 engine: constant Regpat.Pattern_Matcher := Regpat.Compile("^(((struct|enum|union|unsigned|signed)\s)?(long\s)?(long\s)?[a-zA-Z0-9_]+\s*(\s+|[*]*)\s*[a-zA-Z0-9_]+\s*[(]\s*(\s*(((struct|enum|union|unsigned|signed)\s)?(long\s)?(long\s)?\s*[a-zA-Z0-9_]+\s*(\s+|[*]*)\s*[a-zA-Z0-9_]+\s*([[]\s*[0-9]*\s*[]]\s*)?\s*[,]?\s*)*|(\s*void\s*)?)\s*[)])");
                 match: Regpat.Match_Array(0 .. 1);
@@ -167,7 +154,7 @@ package body Process is
                 end loop;
                 return False;
         end is_signature;
-
+        
         procedure append(self: sourceFile; warn: Boolean) is
                 f: IO.File_Type;
                 name: String := self.header.To_String;
@@ -226,7 +213,7 @@ package body Process is
                 f.Put(newProto.To_String);
                 f.Close;
         end append;
-
+        
         procedure write(self: sourceFile) is
                 f: IO.File_Type;
                 name: String := self.header.To_String;
@@ -245,7 +232,7 @@ package body Process is
                 f.Put_Line("#endif // " & name);
                 f.Close;
         end write;
-
+        
         function addFile(self: in out Project; path: String) return Boolean is
                 file: IO.File_Type;
                 correct: Boolean := False;
@@ -264,7 +251,7 @@ package body Process is
                 self.files.Append(To_Unbounded_String(path));
                 return True;
         end addFile;
-
+        
         function projectName(self: in out Project; line: String) return Boolean is
                 engine: constant Regpat.Pattern_Matcher := Regpat.Compile("[\/][\/]\s*project\s*([a-zA-Z0-9_]+)");
                 match: Regpat.Match_Array(0 .. 1);
@@ -274,12 +261,15 @@ package body Process is
                 return True when line(match(1).First .. match(1).Last) = self.name.To_String;
                 return False;
         end projectName;
-
-        procedure Compile(self: Project; info: Boolean) is
+        
+        function Compile(self: Project; info: Boolean; err: Boolean) return CLI.Exit_Status is
                 cursor: stringList.Cursor;
-                proc: Spawn.Processes.Process;
                 args: Spawn.String_Vectors.UTF_8_String_Vector;
                 L: aliased Listeners.Listener;
+                error: Unbounded_String;
+                data: Ada.Streams.Stream_Element_Array(1 .. 5);
+                last: Ada.Streams.Stream_Element_Count;
+                sucess: Boolean := True;
         begin
                 if info then
                         IO.Put_Line("starting compiling project : '" & self.name.To_String & "'");
@@ -295,19 +285,31 @@ package body Process is
                         args.Append(cursor.Element.To_String);
                         cursor.Next;
                 end loop;
-                proc.Set_Program("/bin/gcc");
-                proc.Set_Arguments(args);
-                proc.Set_Working_Directory(DIR.Current_Directory);
-                proc.Set_Listener(L'Unchecked_Access);
-                proc.Start;
+                L.proc.Set_Program("/bin/gcc");
+                L.proc.Set_Arguments(args);
+                L.proc.Set_Working_Directory(DIR.Current_Directory);
+                L.proc.Set_Listener(L'Unchecked_Access);
+                L.proc.Start;
                 while not L.Stopped loop
+                        L.proc.Read_Standard_Error(data, last, sucess);
+                        if last >= data'First then
+                                for char of data loop
+                                        Ada.Strings.Unbounded.Append(error, Character'Val(Char));
+                                end loop;
+                        end if;
+                        L.proc.Read_Standard_Output(data, last, sucess);
                         Spawn.Processes.Monitor_Loop(0.001);
                 end loop;
-                if proc.Exit_Code /= 0 then
-                        IO.Put_Line ("error: compilation of project '" & self.name.To_String & "' finished with error");
+                if L.proc.Exit_Code /= 0 then
+                        if err then
+                                IO.Put_Line(error.To_String);
+                                IO.Put_Line("error: compilation of project '" & self.name.To_String & "' finished with error");
+                        end if;
+                        return CLI.Failure;
                 end if;
                 if info then
                         IO.Put_Line("finished compiling project: '" & self.name.To_String & "'");
                 end if;
+                return CLI.Success;
         end Compile;
 end Process;

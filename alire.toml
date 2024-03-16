@@ -1,6 +1,6 @@
 name = "headmaker"
 description = "Shiny new project"
-version = "0.1.0-dev"
+version = "2.1"
 
 authors = ["Tidian DELAGE"]
 maintainers = ["Tidian DELAGE <tidian.delage@protonmail.ch>"]

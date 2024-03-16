@@ -1,5 +1,7 @@
 with Ada.Containers.Doubly_Linked_Lists;
 with Ada.Strings.Unbounded;
+with Ada.Command_Line;
+with Spawn;
 use Ada.Strings.Unbounded;
 
 package Process is
@@ -12,7 +14,7 @@ package Process is
         function is_signature(self: sourceFile; signature: String) return Boolean;
         function headName(self: in out sourceFile; line: String) return Boolean;
         function has_symbol(self: sourceFile; symbol: String) return Boolean;
-        procedure processFile(self: in out sourceFile; path: String; info: Boolean);
+        procedure processFile(self: in out sourceFile; path: String; info: Boolean; error: Boolean);
         procedure getPrototype(self: in out sourceFile; line: String);
         procedure append(self: sourceFile; warn: Boolean);
         procedure write(self: sourceFile);
@@ -28,5 +30,5 @@ package Process is
 
         function projectName(self: in out Project; line: String) return Boolean;
         function addFile(self: in out Project; path: String) return Boolean;
-        procedure compile(self: Project; info: Boolean);
+        function compile(self: Project; info: Boolean; err: Boolean) return Ada.Command_Line.Exit_Status;
 end Process;

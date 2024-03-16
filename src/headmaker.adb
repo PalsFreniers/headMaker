@@ -22,6 +22,7 @@ procedure Headmaker is
         project: process.Project;
         info: Boolean := False;
         warn: Boolean := True;
+        error: Boolean := True;
         computeProject: Boolean := False;
 begin
         for i in 1 .. CLI.Argument_Count loop
@@ -42,6 +43,14 @@ begin
                                 info := False;
                         elsif CLI.Argument(i) = "-i" then
                                 info := True;
+                        elsif CLI.Argument(i) = "--no-error" then
+                                error := False;
+                        elsif CLI.Argument(i) = "--error" then
+                                error := True;
+                        elsif CLI.Argument(i) = "-ne" then
+                                error := False;
+                        elsif CLI.Argument(i) = "-e" then
+                                error := True;
                         elsif CLI.Argument(i) = "-p" then
                                 if CLI.Argument_Count < i + 1 then
                                         process.printHelp(CLI.Command_Name);
@@ -83,6 +92,14 @@ begin
                                 info := False;
                         elsif CLI.Argument(i) = "-i" then
                                 info := True;
+                        elsif CLI.Argument(i) = "--no-error" then
+                                error := False;
+                        elsif CLI.Argument(i) = "--error" then
+                                error := True;
+                        elsif CLI.Argument(i) = "-ne" then
+                                error := False;
+                        elsif CLI.Argument(i) = "-e" then
+                                error := True;
                         elsif CLI.Argument(i) = "-p" then
                                 if CLI.Argument_Count < i + 1 then
                                         process.printHelp(CLI.Command_Name);
@@ -117,12 +134,12 @@ begin
                         when DIR.Ordinary_File =>
                                 if not computeProject then
                                         file: process.sourceFile;
-                                        file.processFile(dirEntry.Full_Name, info);
+                                        file.processFile(dirEntry.Full_Name, info, error);
                                         sources.Append(file);
                                 else
                                         if project.addFile(dirEntry.Full_Name) then
                                                 file: process.sourceFile;
-                                                file.processFile(dirEntry.Full_Name, info);
+                                                file.processFile(dirEntry.Full_Name, info, error);
                                                 sources.Append(file);
                                         end if;
                                 end if;
@@ -183,5 +200,5 @@ begin
         if info then
                 IO.Put_Line("Finished writing all headers");
         end if;
-        project.compile(info);
+        CLI.Set_Exit_Status(project.Compile(info, error));
 end Headmaker;
