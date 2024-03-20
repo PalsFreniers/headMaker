@@ -200,5 +200,7 @@ begin
         if info then
                 IO.Put_Line("Finished writing all headers");
         end if;
-        CLI.Set_Exit_Status(project.Compile(info, error));
+        if computeProject then
+                CLI.Set_Exit_Status(project.Compile(info, error));
+        end if;
 end Headmaker;

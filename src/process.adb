@@ -267,6 +267,7 @@ package body Process is
                 args: Spawn.String_Vectors.UTF_8_String_Vector;
                 L: aliased Listeners.Listener;
                 error: Unbounded_String;
+                output: Unbounded_String;
                 data: Ada.Streams.Stream_Element_Array(1 .. 5);
                 last: Ada.Streams.Stream_Element_Count;
                 sucess: Boolean := True;
@@ -291,6 +292,8 @@ package body Process is
                 L.proc.Set_Listener(L'Unchecked_Access);
                 L.proc.Start;
                 while not L.Stopped loop
+                        Spawn.Processes.Monitor_Loop(0.001);
+                        exit when L.Stopped;
                         L.proc.Read_Standard_Error(data, last, sucess);
                         if last >= data'First then
                                 for char of data loop
@@ -298,7 +301,11 @@ package body Process is
                                 end loop;
                         end if;
                         L.proc.Read_Standard_Output(data, last, sucess);
-                        Spawn.Processes.Monitor_Loop(0.001);
+                        if last >= data'First then
+                                for char of data loop
+                                        Ada.Strings.Unbounded.Append(output, Character'Val(Char));
+                                end loop;
+                        end if;
                 end loop;
                 if L.proc.Exit_Code /= 0 then
                         if err then
@@ -308,6 +315,7 @@ package body Process is
                         return CLI.Failure;
                 end if;
                 if info then
+                        IO.Put_Line(output.To_String);
                         IO.Put_Line("finished compiling project: '" & self.name.To_String & "'");
                 end if;
                 return CLI.Success;
